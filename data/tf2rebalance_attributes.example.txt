@@ -48,13 +48,24 @@
 				
 				// The "id" key indicates the id of the
 				// attribute you wish to add into the class.
-				// You can find them on the follwing website:
+				// You can find them on the following website:
 				// https://tf2b.com/attriblist.php
 				"id"    	"26" // move speed bonus
 				
 				// The "value" indicates the value of the
 				// attribute you wish to add.
 				"value"		"100"
+			}
+
+			"attribute2"
+			{
+				// The "name" key is an ALTERNATIVE to the "id" key.
+				// It indicates the name of the attribute
+				// you wish to add into the class.
+				// You can find them on the following website:
+				// https://wiki.teamfortress.com/wiki/List_of_item_attributes
+				"name"		"max health additive bonus"
+				"value"		"25"
 			}
 			
 			// If you don't wish to add any attributes or info on
@@ -74,7 +85,7 @@
 			
 			"attribute2"
 			{
-				"id"	"190" // active health regen
+				"name"	"active health regen"
 				"value"	"2"
 			}
 		}
@@ -110,8 +121,8 @@
 		
 		"attribute2"
 		{
-			"id"	"3" 	// clip size penalty
-			"value"	"1.50"
+			"name"	"clip size penalty"
+			"value"	"1.5"
 		}
 	}
 	
@@ -128,7 +139,7 @@
 	
 		"attribute1"
 		{
-			"id"	"201" // gesture speed increase
+			"name"	"gesture speed increase"
 			"value"	"2.0"
 		}
 		
