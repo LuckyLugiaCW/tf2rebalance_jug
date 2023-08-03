@@ -1,4 +1,5 @@
 #include <sourcemod>
+#include <tf_econ_data>
 #include <tf2_stocks>
 #include <tf2items>
 #include <clientprefs>
@@ -79,10 +80,10 @@ ConVar g_bDebugKeyvaluesFile; // Convar that throws debug messages about keyvalu
 
 // Cookies
 Handle g_CookieWeaponVis = INVALID_HANDLE;
-bool g_bWeaponVis[MAXPLAYERS+1] = false;
+bool g_bWeaponVis[MAXPLAYERS+1];
 
 Handle g_CookieWeaponSpawnInfo = INVALID_HANDLE;
-bool g_bInfoOnSpawn[MAXPLAYERS+1] = false;
+bool g_bInfoOnSpawn[MAXPLAYERS+1];
 
 // Keyvalues file for attributes
 Handle g_hKeyvaluesAttributesFile = INVALID_HANDLE;
@@ -90,14 +91,14 @@ Handle g_hKeyvaluesAttributesFile = INVALID_HANDLE;
 // Plugin dependencies: are they enabled or not?
 bool g_bIsTF2AttributesEnabled = false;
 // Bool that indicates the player's first spawn.
-bool g_bFirstSpawn[MAXPLAYERS+1] = false; 
+bool g_bFirstSpawn[MAXPLAYERS+1]; 
 // Is the mode MvM?
 bool g_bIsMVM = false;
 
 // Bool that indicates if that item has been changed.
-bool g_bRebalance_ItemIndexChanged[MAXIMUM_ADDITIONS] = false;
+bool g_bRebalance_ItemIndexChanged[MAXIMUM_ADDITIONS];
 // Int that indicates the ID of the changed item.
-int g_iRebalance_ItemIndexDef[MAXIMUM_ADDITIONS] = -1;
+int g_iRebalance_ItemIndexDef[MAXIMUM_ADDITIONS];
 // Int that indicates how many items have been changed.
 int g_iRebalance_ItemIndexChangesNumber = 0;
 // Int that indicates which attribute(s) to add to a weapon.
@@ -106,32 +107,52 @@ int g_iRebalance_ItemAttribute_Add[MAXIMUM_ADDITIONS][MAXIMUM_ATTRIBUTES];
 // float that indicates the value of the attribute(s) to add to a weapon.
 float g_fRebalance_ItemAttribute_AddValue[MAXIMUM_ADDITIONS][MAXIMUM_ATTRIBUTES]; 
 // int that indicates how many attributes were added on a weapon.
-int g_iRebalance_ItemAttribute_AddNumber[MAXIMUM_ADDITIONS] = 0;
+int g_iRebalance_ItemAttribute_AddNumber[MAXIMUM_ADDITIONS];
 // char that indicates the description of the item.
 char g_cRebalance_ItemDescription[MAXIMUM_ADDITIONS][MAXIMUM_DESCRIPTIONLIMIT];
 // bool that indicates if the item has a description.
-bool g_bRebalance_DoesItemHaveDescription[MAXIMUM_ADDITIONS] = false;
+bool g_bRebalance_DoesItemHaveDescription[MAXIMUM_ADDITIONS];
 // bool that indicates if the item should preserve attributes.
-bool g_bRebalance_ShouldItemPreserveAttributes[MAXIMUM_ADDITIONS] = false;
+bool g_bRebalance_ShouldItemPreserveAttributes[MAXIMUM_ADDITIONS];
 
 // Class things:
 // Bool that indicates if that class was changed.
-bool g_bRebalance_ClassChanged[TFClassType] = false;
+bool g_bRebalance_ClassChanged[TFClassType];
 // int that indicates which attributes we'll add into the class.
 int g_iRebalance_ClassAttribute_Add[TFClassType][MAXIMUM_ATTRIBUTES]; 
 // float that indicates the value of the attributes we'll add.
 float g_fRebalance_ClassAttribute_AddValue[TFClassType][MAXIMUM_ATTRIBUTES];
 // int that indicates how many attributes were added on a class.
-int g_iRebalance_ClassAttribute_AddNumber[TFClassType] = 0;
+int g_iRebalance_ClassAttribute_AddNumber[TFClassType];
 // int that indicates how many classes were modified
 int g_iRebalance_ClassChangesNumber = 0;
 // char that indicates the description of the class.
 char g_cRebalance_ClassDescription[TFClassType][MAXIMUM_DESCRIPTIONLIMIT];
 // bool that indicates if the class has a description.
-bool g_bRebalance_DoesClassHaveDescription[TFClassType] = false;
+bool g_bRebalance_DoesClassHaveDescription[TFClassType];
 
 public void OnPluginStart()
 {
+	for (int i = 0 ; i < MAXPLAYERS+1 ; i++) {
+		g_bWeaponVis[i] = false;
+		g_bInfoOnSpawn[i] = false;
+		g_bFirstSpawn[i] = false;
+	}
+	
+	for (int i = 0 ; i < MAXIMUM_ADDITIONS ; i++) {
+		g_bRebalance_ItemIndexChanged[i] = false;
+		g_iRebalance_ItemIndexDef[i] = -1;
+		g_iRebalance_ItemAttribute_AddNumber[i] = 0;
+		g_bRebalance_DoesItemHaveDescription[i] = false;
+		g_bRebalance_ShouldItemPreserveAttributes[i] = false;
+	}
+	
+	for (int i = 0 ; i < 10 ; i++) {
+		g_bRebalance_ClassChanged[i] = false;
+		g_iRebalance_ClassAttribute_AddNumber[i] = 0;
+		g_bRebalance_DoesClassHaveDescription[i] = false;
+	}
+	
 	// Convars, they do what they say on the tin.
 	g_bEnablePlugin = CreateConVar("sm_tfrebalance_enable", "1",
 	"Enables/Disables the plugin. Default = 1, 0 to disable.",
@@ -1286,6 +1307,15 @@ public bool GetAndStoreWeaponAttributes()
 						g_iRebalance_ClassAttribute_Add[tfClassModified][g_iRebalance_ClassAttribute_AddNumber[tfClassModified]] =
 						KvGetNum(g_hKeyvaluesAttributesFile, "id", 0);
 						
+						//Here we check for a designated attribute name and store it if it exists. -LL
+						char cNameString[64];
+						KvGetString(g_hKeyvaluesAttributesFile, "name", cNameString, 64, "null_value");
+						int iDefIndex = TF2Econ_TranslateAttributeNameToDefinitionIndex(cNameString);
+						if(iDefIndex != -1) {
+							g_iRebalance_ClassAttribute_Add[tfClassModified][g_iRebalance_ClassAttribute_AddNumber[tfClassModified]] =
+							iDefIndex;
+						}
+						
 						// Here we store the attribute value.
 						g_fRebalance_ClassAttribute_AddValue[tfClassModified][g_iRebalance_ClassAttribute_AddNumber[tfClassModified]] =
 						KvGetFloat(g_hKeyvaluesAttributesFile, "value", 0.0);
@@ -1382,6 +1412,15 @@ public bool GetAndStoreWeaponAttributes()
 							// Here we store the attribute id.
 							g_iRebalance_ItemAttribute_Add[g_iRebalance_ItemIndexChangesNumber][g_iRebalance_ItemAttribute_AddNumber[g_iRebalance_ItemIndexChangesNumber]] =
 							KvGetNum(g_hKeyvaluesAttributesFile, "id", 0);
+							
+							//Here we check for a designated attribute name and store it if it exists. -LL
+							char cNameString[64];
+							KvGetString(g_hKeyvaluesAttributesFile, "name", cNameString, 64, "null_value");
+							int iDefIndex = TF2Econ_TranslateAttributeNameToDefinitionIndex(cNameString);
+							if(iDefIndex != -1) {
+								g_iRebalance_ItemAttribute_Add[g_iRebalance_ItemIndexChangesNumber][g_iRebalance_ItemAttribute_AddNumber[g_iRebalance_ItemIndexChangesNumber]] =
+								iDefIndex;
+							}
 							
 							// Here we store the attribute value.
 							g_fRebalance_ItemAttribute_AddValue[g_iRebalance_ItemIndexChangesNumber][g_iRebalance_ItemAttribute_AddNumber[g_iRebalance_ItemIndexChangesNumber]] =
